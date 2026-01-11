@@ -1,5 +1,6 @@
 """Data Loader Service - CSV loading and caching with pandas."""
 
+import logging
 from datetime import date
 from functools import lru_cache
 from pathlib import Path
@@ -13,6 +14,8 @@ from app.core.exceptions import (
     NoDataInRangeError,
     FileTooLargeError,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class DataLoaderService:
@@ -42,6 +45,7 @@ class DataLoaderService:
 
     def _load_data(self) -> pd.DataFrame:
         """Load CSV data into DataFrame with proper type parsing."""
+        logger.info(f"Loading data from {self._csv_path}")
         df = pd.read_csv(
             self._csv_path,
             parse_dates=["date"],
@@ -56,6 +60,15 @@ class DataLoaderService:
         )
         # Sort by vendor and date for consistent ordering
         df = df.sort_values(["vendor", "date"]).reset_index(drop=True)
+
+        # Log dataset summary (without sensitive data)
+        vendor_count = df["vendor"].nunique()
+        universe_count = df["universe"].nunique()
+        date_min, date_max = df["date"].min(), df["date"].max()
+        logger.info(
+            f"Data loaded: {len(df)} records, {vendor_count} vendors, "
+            f"{universe_count} universes, date range {date_min.date()} to {date_max.date()}"
+        )
         return df
 
     @property
@@ -113,6 +126,11 @@ class DataLoaderService:
         Raises:
             ValueError: If vendor is not found.
         """
+        logger.debug(
+            f"Getting vendor data: vendor=***, "
+            f"start_date={start_date}, end_date={end_date}"
+        )
+
         if self._df is None:
             self._df = self._load_data()
 
@@ -120,6 +138,7 @@ class DataLoaderService:
 
         if df.empty:
             available = self._df["vendor"].unique().tolist()
+            logger.warning("Vendor not found (requested vendor hidden for privacy)")
             raise VendorNotFoundError(vendor=vendor, available=available)
 
         if start_date:
@@ -129,11 +148,15 @@ class DataLoaderService:
 
         # raise NoDataInRangeError if no data in range
         if df.empty:
+            logger.warning(
+                f"No data in range: start_date={start_date}, end_date={end_date}"
+            )
             raise NoDataInRangeError(
                 start_date=str(start_date) if start_date else "N/A",
                 end_date=str(end_date) if end_date else "N/A",
             )
 
+        logger.debug(f"Returning {len(df)} records for vendor query")
         return df.reset_index(drop=True)
 
     def get_data_by_universe(self, universe: str) -> pd.DataFrame:
@@ -205,6 +228,7 @@ class DataLoaderService:
 
     def reload(self) -> None:
         """Force reload of data from CSV (clears cache)."""
+        logger.info("Reloading data from CSV (cache cleared)")
         self._df = None
         self._df = self._load_data()
 
@@ -217,6 +241,7 @@ class DataLoaderService:
         """
         from io import BytesIO
 
+        logger.debug(f"Loading data from bytes: {len(data)} bytes")
         self._df = pd.read_csv(
             BytesIO(data),
             parse_dates=["date"],
@@ -231,6 +256,7 @@ class DataLoaderService:
         )
         # Sort by vendor and date for consistent ordering
         self._df = self._df.sort_values(["vendor", "date"]).reset_index(drop=True)
+        logger.info(f"Data loaded from bytes: {len(self._df)} records")
 
     async def load_data_from_upload(
         self,
@@ -264,14 +290,21 @@ class DataLoaderService:
         """
         allowed_content_types = ["text/csv", "application/csv", "text/plain"]
 
+        logger.info(
+            f"Processing file upload: filename={filename}, "
+            f"content_type={content_type}, max_size={max_file_size // (1024 * 1024)}MB"
+        )
+
         # 1. Validate content type
         if content_type not in allowed_content_types:
+            logger.warning(f"Upload rejected: invalid content type {content_type}")
             raise ValueError(
                 f"Invalid file type: {content_type}. Allowed: {allowed_content_types}"
             )
 
         # 2. Validate filename extension
         if filename and not filename.lower().endswith(".csv"):
+            logger.warning("Upload rejected: invalid file extension")
             raise ValueError("Invalid file extension. Only .csv files allowed.")
 
         # 3. Read file with size limit (streaming read)
@@ -280,21 +313,30 @@ class DataLoaderService:
         while chunk := await read_chunk(chunk_size):
             bytes_read += len(chunk)
             if bytes_read > max_file_size:
+                logger.warning(f"Upload rejected: file too large ({bytes_read} bytes)")
                 raise FileTooLargeError(max_size_mb=max_file_size // (1024 * 1024))
             contents += chunk
 
+        logger.debug(f"Read {bytes_read} bytes from upload")
+
         # 4. Validate not empty
         if not contents:
+            logger.warning("Upload rejected: empty file")
             raise ValueError("Empty file")
 
         # 5. Process the file
         self.load_data_from_bytes(contents)
 
-        return {
+        result = {
             "total_records": len(self.dataframe),
             "vendors": self.get_vendors(),
             "file_size_bytes": bytes_read,
         }
+        logger.info(
+            f"Upload successful: {result['total_records']} records, "
+            f"{len(result['vendors'])} vendors, {bytes_read} bytes"
+        )
+        return result
 
 
 # Singleton instance for dependency injection

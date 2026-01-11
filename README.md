@@ -15,9 +15,9 @@ A FastAPI backend service for evaluating alternative data vendors. Built for an 
 ### Option 1: Docker (Recommended)
 
 ```bash
-# Create .env file with your OpenAI API key
+# Create .env file (optional: add OpenAI API key for LLM-powered queries)
 cp .env.example .env
-# Edit .env and add your OPENAI_API_KEY
+# Edit .env and add your OPENAI_API_KEY (optional - regex fallback works without it)
 
 # Build and run
 docker-compose up --build
@@ -68,13 +68,14 @@ brew install uv
 uv --version
 ```
 
-**4. Set up environment variables**
+**4. Set up environment variables (optional)**
 
 ```bash
 # Create .env file
 cp .env.example .env
 
-# Edit .env and add your OPENAI_API_KEY
+# Edit .env and add your OPENAI_API_KEY (optional)
+# Without it, natural language queries use regex-based parsing
 ```
 
 #### Setup & Run
@@ -204,11 +205,12 @@ Routes are thin controllers; business logic lives in services. This enables:
 - Reuse across CLI/batch jobs
 - Clear separation of concerns
 
-### 2. LLM-Powered Query Parsing
+### 2. LLM-Powered Query Parsing (with Fallback)
 Natural language queries are parsed using OpenAI with structured JSON output:
 - Single LLM call extracts both intent and entities
 - Handles query variations naturally
 - Deterministic output via `temperature=0`
+- **Regex fallback**: When `OPENAI_API_KEY` is not configured, the service automatically falls back to a regex-based parser that handles common query patterns (list vendors, compare, drawdowns, date ranges)
 
 ### 3. Singleton Data Loader
 CSV is loaded once and cached. For this small, static dataset:

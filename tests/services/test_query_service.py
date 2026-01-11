@@ -11,6 +11,7 @@ from app.services.query_service import (
     QueryIntent,
     QueryResult,
     QueryService,
+    RegexQueryParser,
 )
 
 
@@ -290,3 +291,73 @@ class TestQueryService:
         mock_parser.parse.assert_called_once_with("list vendors")
         mock_executor.execute.assert_called_once_with(parsed)
         assert returned_parsed == parsed
+
+
+# =============================================================================
+# Tests - RegexQueryParser
+# =============================================================================
+
+
+class TestRegexQueryParser:
+    """Test regex-based fallback parser."""
+
+    @pytest.fixture
+    def parser(self, mock_data_loader):
+        """Create RegexQueryParser with mocked data loader."""
+        parser = RegexQueryParser()
+        parser._data_loader = mock_data_loader
+        return parser
+
+    def test_parse_list_vendors(self, parser: RegexQueryParser):
+        """Parse 'list vendors' query."""
+        result = parser.parse("list all vendors")
+
+        assert result.intent == QueryIntent.LIST_VENDORS
+
+    def test_parse_compare_vendors(self, parser: RegexQueryParser):
+        """Parse comparison queries."""
+        result = parser.parse("which vendor is best?")
+
+        assert result.intent == QueryIntent.COMPARE_VENDORS
+
+    def test_parse_drawdown_analysis(self, parser: RegexQueryParser):
+        """Parse drawdown queries."""
+        result = parser.parse("show drawdown periods")
+
+        assert result.intent == QueryIntent.DRAWDOWN_ANALYSIS
+
+    def test_parse_vendor_metrics(self, parser: RegexQueryParser):
+        """Parse vendor-specific metrics query."""
+        result = parser.parse("metrics for Vendor_A")
+
+        assert result.intent == QueryIntent.VENDOR_METRICS
+        assert "Vendor_A" in result.vendors
+
+    def test_parse_period_metrics_with_month(self, parser: RegexQueryParser):
+        """Parse period metrics with month name."""
+        result = parser.parse("metrics in January 2023")
+
+        assert result.intent == QueryIntent.PERIOD_METRICS
+        assert result.start_date == date(2023, 1, 1)
+        assert result.end_date == date(2023, 1, 31)
+
+    def test_parse_period_metrics_with_iso_dates(self, parser: RegexQueryParser):
+        """Parse period metrics with ISO dates."""
+        result = parser.parse("data from 2023-01-01 to 2023-06-30")
+
+        assert result.intent == QueryIntent.PERIOD_METRICS
+        assert result.start_date == date(2023, 1, 1)
+        assert result.end_date == date(2023, 6, 30)
+
+    def test_extract_multiple_vendors(self, parser: RegexQueryParser):
+        """Extract multiple vendor names from query."""
+        result = parser.parse("compare Vendor_A and Vendor_B")
+
+        assert "Vendor_A" in result.vendors
+        assert "Vendor_B" in result.vendors
+
+    def test_unknown_query(self, parser: RegexQueryParser):
+        """Return UNKNOWN for unrecognized queries."""
+        result = parser.parse("hello world")
+
+        assert result.intent == QueryIntent.UNKNOWN

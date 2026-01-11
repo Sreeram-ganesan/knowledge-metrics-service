@@ -1,5 +1,6 @@
 """Metrics Service - Statistical computations for vendor analysis."""
 
+import logging
 from dataclasses import dataclass
 from datetime import date
 from typing import Optional
@@ -12,6 +13,8 @@ from app.core.exceptions import (
     InvalidDateRangeError,
     NotFoundError,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -124,8 +127,15 @@ class MetricsService:
             InvalidDateRangeError: If start_date is after or equal to end_date.
             VendorNotFoundError: If no data found for the vendor.
         """
+        logger.debug(
+            f"Computing vendor metrics: start_date={start_date}, end_date={end_date}"
+        )
+
         # Validate date range
         if start_date and end_date and start_date >= end_date:
+            logger.warning(
+                f"Invalid date range: start_date={start_date} >= end_date={end_date}"
+            )
             raise InvalidDateRangeError(
                 start_date=str(start_date),
                 end_date=str(end_date),
@@ -211,6 +221,11 @@ class MetricsService:
             else None
         )
 
+        logger.info(
+            f"Vendor metrics computed: records={len(df)}, "
+            f"signal_mean={round(signal_mean, 4)}, drawdown_rate={round(drawdown_rate, 4)}"
+        )
+
         return VendorMetrics(
             vendor=vendor,
             universes=universes,
@@ -258,9 +273,13 @@ class MetricsService:
         Returns:
             PeriodMetrics: Aggregated statistics for the period.
         """
+        logger.debug(
+            f"Computing period metrics: start_date={start_date}, end_date={end_date}"
+        )
         df = self._data_loader.get_data_by_date_range(start_date, end_date)
 
         if df.empty:
+            logger.warning("No data found for period metrics")
             # Return empty metrics
             return PeriodMetrics(
                 start_date=start_date or date.min,
@@ -296,6 +315,11 @@ class MetricsService:
             (drawdown_sums / drawdown_counts).round(4).to_dict()
         )
 
+        logger.info(
+            f"Period metrics computed: records={len(df)}, vendors={df['vendor'].nunique()}, "
+            f"drawdown_events={int(df['drawdown_flag'].sum())}"
+        )
+
         return PeriodMetrics(
             start_date=actual_start,
             end_date=actual_end,
@@ -315,7 +339,9 @@ class MetricsService:
         Returns:
             ComparativeMetrics: Rankings and comparisons.
         """
+        logger.debug("Computing comparative metrics across all vendors")
         vendors = self._data_loader.get_vendors()
+        logger.debug(f"Analyzing {len(vendors)} vendors")
 
         # Compute metrics for each vendor
         vendor_metrics = {v: self.get_vendor_metrics(v) for v in vendors}
@@ -355,6 +381,8 @@ class MetricsService:
             )
         }
 
+        logger.info(f"Comparative metrics computed: {len(vendors)} vendors analyzed")
+
         return ComparativeMetrics(
             vendors=vendors,
             best_avg_signal=best_avg_signal,
@@ -377,9 +405,13 @@ class MetricsService:
         Returns:
             dict: Drawdown statistics and patterns.
         """
+        logger.debug(
+            f"Analyzing drawdowns: vendor_filter={'specified' if vendor else 'all'}"
+        )
         df = self._data_loader.get_drawdown_periods(vendor)
 
         if df.empty:
+            logger.info("No drawdown events found")
             return {
                 "total_drawdown_events": 0,
                 "vendors_affected": [],
@@ -387,13 +419,19 @@ class MetricsService:
                 "drawdown_dates": [],
             }
 
-        return {
+        result = {
             "total_drawdown_events": len(df),
             "vendors_affected": df["vendor"].unique().tolist(),
             "avg_signal_during_drawdown": round(float(df["signal_strength"].mean()), 4),
             "drawdown_dates": df["date"].dt.strftime("%Y-%m-%d").tolist(),  # type: ignore[union-attr]
             "by_vendor": df.groupby("vendor").size().to_dict(),
         }
+
+        logger.info(
+            f"Drawdown analysis complete: {result['total_drawdown_events']} events, "
+            f"{len(result['vendors_affected'])} vendors affected"
+        )
+        return result
 
 
 def get_metrics_service() -> MetricsService:
