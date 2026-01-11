@@ -7,7 +7,11 @@ from typing import Optional
 import numpy as np
 
 from app.services.data_loader import DataLoaderService, get_data_loader
-from app.core.exceptions import VendorNotFoundError, InvalidDateRangeError
+from app.core.exceptions import (
+    VendorNotFoundError,
+    InvalidDateRangeError,
+    NotFoundError,
+)
 
 
 @dataclass
@@ -137,21 +141,42 @@ class MetricsService:
         # Get all unique universes for this vendor
         universes = df["universe"].unique().tolist() if "universe" in df.columns else []
 
+        # Ensure required columns exist - defensive check
+        if (
+            "feature_x" not in df.columns
+            or "feature_y" not in df.columns
+            or "signal_strength" not in df.columns
+            or "drawdown_flag" not in df.columns
+        ):
+            raise NotFoundError(
+                resource="Required data columns",
+                identifier=f"vendor={vendor}",
+                detail="One or more required columns (feature_x, feature_y, signal_strength, drawdown_flag) are missing.",
+            )
+
         # Basic stats
         feature_x_mean = float(df["feature_x"].mean())
-        feature_x_std = float(df["feature_x"].std()) if len(df) > 1 else 0.0
+        feature_x_std = (
+            float(df["feature_x"].std()) if len(df) > 1 else 0.0
+        )  # If only one record, std deviation is 0
         feature_y_mean = float(df["feature_y"].mean())
-        feature_y_std = float(df["feature_y"].std()) if len(df) > 1 else 0.0
+        feature_y_std = (
+            float(df["feature_y"].std()) if len(df) > 1 else 0.0
+        )  # If only one record, std deviation is 0
 
         # Signal strength analysis
         signal_mean = float(df["signal_strength"].mean())
-        signal_std = float(df["signal_strength"].std()) if len(df) > 1 else 0.0
+        signal_std = (
+            float(df["signal_strength"].std()) if len(df) > 1 else 0.0
+        )  # If only one record, std deviation is 0
         signal_min = float(df["signal_strength"].min())
         signal_max = float(df["signal_strength"].max())
 
         # Drawdown analysis
         drawdown_count = int(df["drawdown_flag"].sum())
-        drawdown_rate = drawdown_count / len(df) if len(df) > 0 else 0.0
+        drawdown_rate = (
+            drawdown_count / len(df) if len(df) > 0 else 0.0
+        )  # Avoid division by zero
 
         # Correlation between features (Pearson)
         # Returns None when undefined (n=1 or constant values)
@@ -261,19 +286,15 @@ class MetricsService:
             }
         )
 
-        vendor_avg_signals = {
-            v: round(float(vendor_stats.loc[v, ("signal_strength", "mean")]), 4)
-            for v in vendor_stats.index
-        }
+        vendor_avg_signals: dict[str, float] = (
+            vendor_stats[("signal_strength", "mean")].round(4).to_dict()
+        )
 
-        vendor_drawdown_rates = {
-            v: round(
-                float(vendor_stats.loc[v, ("drawdown_flag", "sum")])
-                / float(vendor_stats.loc[v, ("drawdown_flag", "count")]),
-                4,
-            )
-            for v in vendor_stats.index
-        }
+        drawdown_sums = vendor_stats[("drawdown_flag", "sum")]
+        drawdown_counts = vendor_stats[("drawdown_flag", "count")]
+        vendor_drawdown_rates: dict[str, float] = (
+            (drawdown_sums / drawdown_counts).round(4).to_dict()
+        )
 
         return PeriodMetrics(
             start_date=actual_start,
@@ -370,7 +391,7 @@ class MetricsService:
             "total_drawdown_events": len(df),
             "vendors_affected": df["vendor"].unique().tolist(),
             "avg_signal_during_drawdown": round(float(df["signal_strength"].mean()), 4),
-            "drawdown_dates": df["date"].dt.strftime("%Y-%m-%d").tolist(),
+            "drawdown_dates": df["date"].dt.strftime("%Y-%m-%d").tolist(),  # type: ignore[union-attr]
             "by_vendor": df.groupby("vendor").size().to_dict(),
         }
 

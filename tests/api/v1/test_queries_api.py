@@ -40,7 +40,7 @@ def client():
 def mock_query_service():
     """
     Create a mock QueryService.
-    
+
     MagicMock(spec=QueryService) ensures the mock only has methods
     that exist on the real QueryService class.
     """
@@ -51,17 +51,17 @@ def mock_query_service():
 def override_query_service(mock_query_service):
     """
     Override the QueryService dependency with our mock.
-    
+
     THIS IS THE KEY BENEFIT OF DEPENDENCY INJECTION:
-    
+
     In the route, we have:
         async def process_query(query_service: QueryServiceDep):
             result = query_service.process_query(...)
-    
+
     Normally, FastAPI calls `get_query_service()` to create the real service.
     But here, we tell FastAPI: "When anyone asks for get_query_service,
     give them our mock instead."
-    
+
     No need for:
         - @patch('app.api.v1.routes.queries.get_query_service')
         - Complex import path management

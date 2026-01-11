@@ -83,6 +83,15 @@ cp .env.example .env
 # Clone and navigate to project
 cd knowledge-metrics-service
 
+# Create a virtual environment (uv automatically uses .python-version)
+uv venv
+
+# Activate the virtual environment
+# macOS/Linux:
+source .venv/bin/activate
+# Windows:v
+# .venv\Scripts\activate
+
 # Install dependencies (uv reads .python-version and pyproject.toml)
 uv sync
 
@@ -92,6 +101,8 @@ uv run uvicorn app.main:app --reload
 # API available at http://localhost:8000
 # Docs at http://localhost:8000/docs
 ```
+
+> **Note:** `uv run` automatically activates the virtual environment, so you can skip the activation step if using `uv run` for all commands.
 
 ## API Endpoints
 

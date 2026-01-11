@@ -40,8 +40,9 @@ class JSONFormatter(logging.Formatter):
             log_data["exception"] = self.formatException(record.exc_info)
 
         # Add extra fields if any (e.g., request_id from contextvars)
-        if hasattr(record, "request_id"):
-            log_data["request_id"] = record.request_id
+        request_id = getattr(record, "request_id", None)
+        if request_id is not None:
+            log_data["request_id"] = request_id
 
         return json.dumps(log_data, default=str)
 

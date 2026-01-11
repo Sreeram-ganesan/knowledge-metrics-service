@@ -114,7 +114,10 @@ Return ONLY valid JSON, no explanation."""
         )
 
         # Parse LLM response
-        result = json.loads(response.choices[0].message.content)
+        content = response.choices[0].message.content
+        if content is None:
+            raise ValueError("LLM response content is None")
+        result = json.loads(content)
 
         # Convert to ParsedQuery
         intent = QueryIntent(result.get("intent", "unknown"))
