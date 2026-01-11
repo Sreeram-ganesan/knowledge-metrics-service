@@ -12,6 +12,8 @@ A FastAPI backend service for evaluating alternative data vendors. Built for an 
 
 ## Quick Start
 
+> **Offline by default.** The service makes no external network calls unless `OPENAI_API_KEY` is set, in which case NL parsing uses an LLM. Without it, a deterministic regex parser is used.
+
 ### Option 1: Docker (Recommended)
 
 ```bash
@@ -235,7 +237,9 @@ Internal service models use `@dataclass` for simplicity; Pydantic models at API 
 
 ## Data
 
-A sample CSV (`data/vendor_metrics.csv`) is included for demo purposes. To use your own data, replace it with a CSV matching this format:
+This project ships with the exact provided CSV as the default data source. The `/upload` endpoint is included to show how the service would evolve internally.
+
+To use your own data, replace `data/vendor_metrics.csv` with a CSV matching this format:
 
 ```csv
 vendor,date,universe,feature_x,feature_y,signal_strength,drawdown_flag
@@ -251,6 +255,18 @@ AlphaSignals,2020-01-03,Equities,0.12,-0.05,0.35,0
 | `feature_y` | float | Feature value |
 | `signal_strength` | float | Signal strength metric |
 | `drawdown_flag` | 0/1 | Whether period is in drawdown |
+
+## Errors
+
+| Status | Meaning |
+|--------|----------|
+| `400 Unknown vendor` | Vendor name not found in dataset |
+| `422 Invalid date` | Wrong format; expected `YYYY-MM-DD` |
+| `500 Bad CSV schema` | Missing columns; message shows required fields |
+
+## Observability
+
+Each request is tagged with a Request-ID (response header `X-Request-ID`); logs include method, path, status, and duration.
 
 ## Requirements
 
