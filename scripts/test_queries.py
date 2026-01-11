@@ -2,7 +2,7 @@
 """Test client for Natural Language Query API endpoints.
 
 This script demonstrates how to interact with the query endpoints.
-Run the API server first: uvicorn learn_fastapi:app --reload
+Run the API server first: uv run uvicorn app.main:app --reload
 
 Usage:
     python scripts/test_queries.py [--base-url http://localhost:8000]
@@ -92,7 +92,7 @@ def main():
         # Test health first
         if not test_health(client):
             print("\n[FAIL] API is not healthy. Is the server running?")
-            print("   Start it with: uvicorn learn_fastapi:app --reload")
+            print("   Start it with: uv run uvicorn app.main:app --reload")
             sys.exit(1)
 
         # Show supported queries

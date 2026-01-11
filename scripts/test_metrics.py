@@ -2,7 +2,7 @@
 """Test client for Metrics API endpoints.
 
 This script demonstrates how to interact with the metrics endpoints.
-Run the API server first: uvicorn learn_fastapi:app --reload
+Run the API server first: uv run uvicorn app.main:app --reload
 
 Usage:
     python scripts/test_metrics.py [--base-url http://localhost:8000]
@@ -140,7 +140,7 @@ def main():
         # Test health first
         if not test_health(client):
             print("\n[FAIL] API is not healthy. Is the server running?")
-            print("   Start it with: uvicorn learn_fastapi:app --reload")
+            print("   Start it with: uv run uvicorn app.main:app --reload")
             sys.exit(1)
 
         # Test all endpoints
