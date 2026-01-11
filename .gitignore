@@ -1,0 +1,68 @@
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Python cache
+__pycache__/
+.mypy_cache/
+.pytest_cache/
+.cache/
+.ruff_cache/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Distribution / packaging
+build/
+dist/
+docs/
+*.egg-info/
+*.egg
+.eggs/
+
+# IDE / Editor
+.vscode/
+.github/
+collection/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# OS files
+.DS_Store
+Thumbs.db
+*.log
+
+# Docker (optional - uncomment if needed)
+# docker-compose.override.yml
+
+# Data files (uncomment if data should not be tracked)
+# data/*.csv
+
+# Secrets
+*.pem
+*.key
+secrets/
