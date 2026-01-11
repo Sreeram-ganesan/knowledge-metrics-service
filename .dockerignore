@@ -1,0 +1,35 @@
+# Ignore Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Documentation (optional - remove if you want docs in image)
+docs/
+*.md
+!README.md
+
+# Test files
+tests/
+scripts/
+*.test.py
+*_test.py
+
+# Environment files
+.env
+.env.*
