@@ -1,4 +1,15 @@
-"""Application configuration using Pydantic Settings."""
+"""Application configuration using Pydantic Settings.
+
+Why pydantic_settings over pydantic.BaseModel?
+----------------------------------------------
+We use BaseSettings + SettingsConfigDict from pydantic_settings to leverage:
+- Automatic environment variable parsing (via SettingsConfigDict)
+- Automatic .env file loading (via BaseSettings)
+- No manual os.getenv() calls or python-dotenv boilerplate
+- Additional features like env_prefix support and secrets_dir for Docker/K8s
+
+This follows the 12-factor app pattern for configuration management.
+"""
 
 from functools import lru_cache
 from pathlib import Path

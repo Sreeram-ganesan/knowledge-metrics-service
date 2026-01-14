@@ -68,7 +68,7 @@ app.add_middleware(RequestIDMiddleware)
 # Setup global exception handlers
 setup_exception_handlers(app)
 
-# Register routers
+# Register routers - when the no of routers increases, consider splitting into separate file like routes.py
 app.include_router(metrics_router, prefix="/api/v1")
 app.include_router(queries_router, prefix="/api/v1")
 

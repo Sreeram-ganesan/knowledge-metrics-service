@@ -1,6 +1,10 @@
 """Metrics API v1 routes.
 
 Endpoints for vendor metrics, period aggregations, and comparisons.
+
+Design Note: Routes use `async def` for consistency and future-proofing,
+even though current pandas operations are synchronous. This is acceptable
+given our small dataset size and traffic patterns. See docs/DESIGN.md for details.
 """
 
 from datetime import date
